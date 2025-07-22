@@ -16,7 +16,8 @@ jobs:
       # ステップ1: Claudeを呼び出してチャット履歴を要約する
       - name: Summarize chat history with Claude
         id: summarize
-        uses: anthropics/claude-code-base-action@v1
+        # uses: anthropics/claude-code-base-action@v1 # <- 間違い
+        uses: anthropics/claude-code-action/prompt@v1    # <- 正しいアクション名
         with:
           # Claudeに渡す指示（プロンプト）
           prompt: |
