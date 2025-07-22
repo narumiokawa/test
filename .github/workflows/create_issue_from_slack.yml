@@ -1,0 +1,47 @@
+name: Create Issue from Slack
+
+# Lambdaからのrepository_dispatchイベントをトリガーにする
+on:
+  repository_dispatch:
+    types: [create_issue_from_slack]
+
+# ワークフローに必要な権限を設定
+permissions:
+  issues: write
+
+jobs:
+  create_issue_job:
+    runs-on: ubuntu-latest
+    steps:
+      # ステップ1: Claudeを呼び出してチャット履歴を要約する
+      - name: Summarize chat history with Claude
+        id: summarize
+        uses: anthropics/claude-code-base-action@v1
+        with:
+          # Claudeに渡す指示（プロンプト）
+          prompt: |
+            以下のSlackのチャット履歴を、GitHubのIssueとして起票できるように、タイトルと本文の形式で簡潔に要約してください。
+
+            # チャット履歴
+            ${{ github.event.client_payload.chat_history }}
+
+            # 出力形式の指示 (重要)
+            出力は必ず以下のJSON形式で返してください。
+            {
+              "title": "ここに要約したタイトル",
+              "body": "ここに要約した本文"
+            }
+          # GitHub SecretsからAPIキーを渡す
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+
+      # ステップ2: 要約結果を使ってGitHub Issueを作成する
+      - name: Create GitHub Issue
+        uses: actions/create-issue@v2
+        with:
+          # fromJson関数を使って、前のステップのJSON出力から値を取り出す
+          title: ${{ fromJson(steps.summarize.outputs.result).title }}
+          body: ${{ fromJson(steps.summarize.outputs.result).body }}
+          # 必要に応じてラベルや担当者を設定
+          labels: bug, from-slack
+          # トークンは自動的に設定される
+          token: ${{ secrets.GITHUB_TOKEN }}
